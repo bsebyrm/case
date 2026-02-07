@@ -18,16 +18,20 @@ spec:
           image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/frontend:v1
           ports:
             - containerPort: 80
+      imagePullSecrets:
+        - name: swr-secret
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: frontend
   namespace: mern-app
+  annotations:
+    kubernetes.io/elb.id: "e3ece5e3-b6f9-4731-b5cd-75598cfa9ca3"
 spec:
+  type: LoadBalancer
   selector:
     app: frontend
   ports:
     - port: 80
       targetPort: 80
-  type: LoadBalancer

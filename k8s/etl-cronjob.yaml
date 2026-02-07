@@ -11,8 +11,10 @@ spec:
         spec:
           containers:
             - name: etl
-              image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v1
+              image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v2
               envFrom:
                 - configMapRef:
                     name: app-config
+          imagePullSecrets:
+            - name: swr-secret
           restartPolicy: OnFailure

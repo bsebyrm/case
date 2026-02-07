@@ -8,7 +8,8 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: 1Gi
+      storage: 5Gi
+  storageClassName: csi-disk
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -27,7 +28,7 @@ spec:
     spec:
       containers:
         - name: mongodb
-          image: mongo:6
+          image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/mongo:6
           ports:
             - containerPort: 27017
           env:
@@ -36,6 +37,8 @@ spec:
           volumeMounts:
             - name: mongo-storage
               mountPath: /data/db
+      imagePullSecrets:
+        - name: swr-secret
       volumes:
         - name: mongo-storage
           persistentVolumeClaim:

@@ -8,19 +8,31 @@ spec:
   selector:
     matchLabels:
       app: backend
+
   template:
     metadata:
       labels:
         app: backend
+
     spec:
+      imagePullSecrets:
+        - name: swr-secret
+
       containers:
         - name: backend
           image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/backend:v1
+
           ports:
             - containerPort: 5000
+
+          env:
+            - name: MONGO_URI
+              value: "mongodb://mongodb:27017/sample_training"
+
           envFrom:
             - configMapRef:
                 name: app-config
+
 ---
 apiVersion: v1
 kind: Service
