@@ -11,59 +11,51 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      # -------------------------
-      # Login to Huawei SWR
-      # -------------------------
-      - name: Docker login to SWR
+      # --- Login to Huawei SWR ---
+      - name: Login to SWR
         run: |
-          docker login -u ${{ secrets.SWR_USERNAME }} -p ${{ secrets.SWR_PASSWORD }} swr.ap-southeast-3.myhuaweicloud.com
+          echo "${{ secrets.SWR_PASSWORD }}" | docker login \
+            -u "${{ secrets.SWR_USERNAME }}" \
+            --password-stdin \
+            ${{ secrets.SWR_REGISTRY }}
 
-      # -------------------------
-      # Build & Push Backend
-      # -------------------------
+      # --- Build & Push Backend ---
       - name: Build & Push Backend
         run: |
-          docker build -t backend:v1 ./mern-project/server
-          docker tag backend:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/backend:v1
-          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/backend:v1
+          docker build -t backend:${{ github.sha }} ./mern-project/server
+          docker tag backend:${{ github.sha }} ${{ secrets.SWR_REGISTRY }}/baykar-case/backend:${{ github.sha }}
+          docker push ${{ secrets.SWR_REGISTRY }}/baykar-case/backend:${{ github.sha }}
 
-      # -------------------------
-      # Build & Push Frontend
-      # -------------------------
+      # --- Build & Push Frontend ---
       - name: Build & Push Frontend
         run: |
-          docker build -t frontend:v1 ./mern-project/client
-          docker tag frontend:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/frontend:v1
-          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/frontend:v1
+          docker build -t frontend:${{ github.sha }} ./mern-project/client
+          docker tag frontend:${{ github.sha }} ${{ secrets.SWR_REGISTRY }}/baykar-case/frontend:${{ github.sha }}
+          docker push ${{ secrets.SWR_REGISTRY }}/baykar-case/frontend:${{ github.sha }}
 
-      # -------------------------
-      # Build & Push ETL
-      # -------------------------
+      # --- Build & Push ETL ---
       - name: Build & Push ETL
         run: |
-          docker build -t etl:v1 ./python-project
-          docker tag etl:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v1
-          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v1
+          docker build -t etl:${{ github.sha }} ./python-project
+          docker tag etl:${{ github.sha }} ${{ secrets.SWR_REGISTRY }}/baykar-case/etl:${{ github.sha }}
+          docker push ${{ secrets.SWR_REGISTRY }}/baykar-case/etl:${{ github.sha }}
 
-      # -------------------------
-      # Deploy to Kubernetes
-      # -------------------------
-      - name: Deploy to CCE
+      # --- Setup kubectl ---
+      - name: Setup kubeconfig
         run: |
-          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-          kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/configmap.yaml
-          kubectl apply -f k8s/mongodb.yaml
-          kubectl apply -f k8s/backend.yaml
-          kubectl apply -f k8s/frontend.yaml
-          kubectl apply -f k8s/etl-cronjob.yaml
-
-      - name: Verify Pods
+      # --- Deploy to CCE ---
+      - name: Deploy manifests
         run: |
-          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
-          kubectl get pods -n mern-app
+          kubectl apply -f k8s/
+
+      # --- Update images automatically ---
+      - name: Rollout new images
+        run: |
+          kubectl set image deployment/backend backend=${{ secrets.SWR_REGISTRY }}/baykar-case/backend:${{ github.sha }} -n mern-app
+          kubectl set image deployment/frontend frontend=${{ secrets.SWR_REGISTRY }}/baykar-case/frontend:${{ github.sha }} -n mern-app
+          kubectl rollout restart cronjob/etl-job -n mern-app
