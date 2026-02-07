@@ -16,10 +16,14 @@ jobs:
       # --- Login to Huawei SWR ---
       - name: Login to SWR
         run: |
-          echo "${{ secrets.SWR_PASSWORD }}" | docker login \
-            -u "${{ secrets.SWR_USERNAME }}" \
-            --password-stdin \
-            ${{ secrets.SWR_REGISTRY }}
+          for i in 1 2 3; do
+            echo "${{ secrets.SWR_PASSWORD }}" | docker login \
+              -u "${{ secrets.SWR_USERNAME }}" \
+              --password-stdin \
+              swr.ap-southeast-3.myhuaweicloud.com
+            echo "Retrying..."
+            sleep 5
+          done
 
       # --- Build & Push Backend ---
       - name: Build & Push Backend
