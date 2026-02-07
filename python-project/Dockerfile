@@ -2,8 +2,10 @@ FROM python:3.10
 
 WORKDIR /app
 
-COPY ETL.py .
+COPY requirements.txt .
 
-RUN pip install pymongo
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ETL.py .
 
 CMD ["python", "ETL.py"]
