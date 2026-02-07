@@ -6,7 +6,10 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  # ============================
+  # 1) BUILD & PUSH IMAGES (GitHub Hosted)
+  # ============================
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,11 +19,10 @@ jobs:
       # --- Login to Huawei SWR ---
       - name: Login to SWR
         run: |
-            echo "${{ secrets.SWR_PASSWORD }}" | docker login \
-              -u "${{ secrets.SWR_USERNAME }}" \
-              --password-stdin \
-              swr.ap-southeast-3.myhuaweicloud.com
-
+          echo "${{ secrets.SWR_PASSWORD }}" | docker login \
+            -u "${{ secrets.SWR_USERNAME }}" \
+            --password-stdin \
+            swr.ap-southeast-3.myhuaweicloud.com
 
       # --- Build & Push Backend ---
       - name: Build & Push Backend
@@ -43,20 +45,39 @@ jobs:
           docker tag etl:${{ github.sha }} ${{ secrets.SWR_REGISTRY }}/baykar-case/etl:${{ github.sha }}
           docker push ${{ secrets.SWR_REGISTRY }}/baykar-case/etl:${{ github.sha }}
 
-      # --- Setup kubectl ---
+  # ============================
+  # 2) DEPLOY TO CCE (Self-hosted Runner inside Huawei VPC)
+  # ============================
+  deploy-to-cce:
+    needs: build-and-push
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # --- Setup kubeconfig on Runner VM ---
       - name: Setup kubeconfig
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      # --- Deploy to CCE ---
-      - name: Deploy manifests
+      # --- Deploy Kubernetes manifests ---
+      - name: Apply manifests
         run: |
           kubectl apply -f k8s/
 
-      # --- Update images automatically ---
+      # --- Update images with new SHA tag ---
       - name: Rollout new images
         run: |
           kubectl set image deployment/backend backend=${{ secrets.SWR_REGISTRY }}/baykar-case/backend:${{ github.sha }} -n mern-app
           kubectl set image deployment/frontend frontend=${{ secrets.SWR_REGISTRY }}/baykar-case/frontend:${{ github.sha }} -n mern-app
-          kubectl rollout restart cronjob/etl-job -n mern-app
+
+          kubectl rollout status deployment/backend -n mern-app
+          kubectl rollout status deployment/frontend -n mern-app
+
+      # --- Restart ETL CronJob ---
+      - name: Restart ETL CronJob
+        run: |
+          kubectl delete job --all -n mern-app || true
+          kubectl rollout restart deployment/backend -n mern-app
