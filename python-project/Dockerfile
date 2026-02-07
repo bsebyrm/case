@@ -2,8 +2,8 @@ FROM python:3.10
 
 WORKDIR /app
 
-COPY etl.py .
+COPY ETL.py .
 
 RUN pip install pymongo
 
-CMD ["python", "etl.py"]
+CMD ["python", "ETL.py"]
