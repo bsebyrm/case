@@ -1,0 +1,8 @@
+.terraform/
+*.tfstate*
+terraform.tfvars
+**/terraform-provider-*.exe
+node_modules/
+.env
+admin.conf
+kubeconfig

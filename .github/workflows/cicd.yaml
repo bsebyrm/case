@@ -1,0 +1,69 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # -------------------------
+      # Login to Huawei SWR
+      # -------------------------
+      - name: Docker login to SWR
+        run: |
+          docker login -u ${{ secrets.SWR_USERNAME }} -p ${{ secrets.SWR_PASSWORD }} swr.ap-southeast-3.myhuaweicloud.com
+
+      # -------------------------
+      # Build & Push Backend
+      # -------------------------
+      - name: Build & Push Backend
+        run: |
+          docker build -t backend:v1 ./mern-project/server
+          docker tag backend:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/backend:v1
+          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/backend:v1
+
+      # -------------------------
+      # Build & Push Frontend
+      # -------------------------
+      - name: Build & Push Frontend
+        run: |
+          docker build -t frontend:v1 ./mern-project/client
+          docker tag frontend:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/frontend:v1
+          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/frontend:v1
+
+      # -------------------------
+      # Build & Push ETL
+      # -------------------------
+      - name: Build & Push ETL
+        run: |
+          docker build -t etl:v1 ./python-project
+          docker tag etl:v1 swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v1
+          docker push swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v1
+
+      # -------------------------
+      # Deploy to Kubernetes
+      # -------------------------
+      - name: Deploy to CCE
+        run: |
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/mongodb.yaml
+          kubectl apply -f k8s/backend.yaml
+          kubectl apply -f k8s/frontend.yaml
+          kubectl apply -f k8s/etl-cronjob.yaml
+
+      - name: Verify Pods
+        run: |
+          echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+          kubectl get pods -n mern-app
