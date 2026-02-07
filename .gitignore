@@ -6,3 +6,17 @@ node_modules/
 .env
 admin.conf
 kubeconfig
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.backup
+
+# Docker artifacts / random files
+Running
+26.0.1
+2a2a7e1670b1
+7efa906c96de
+
+# OS junk
+.DS_Store
+Thumbs.db
