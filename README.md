@@ -12,6 +12,7 @@ This repository contains the solution for the technical assessment task:
 
 ---
 
+
 ## 🚀 Architecture Overview
 
 The solution is deployed on **Huawei Cloud Kubernetes Engine (CCE)**.
