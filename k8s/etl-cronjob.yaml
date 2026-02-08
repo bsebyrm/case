@@ -3,22 +3,16 @@ kind: CronJob
 metadata:
   name: etl-job
 spec:
-  # Acceptance Criteria: Runs every 1 hour
   schedule: "0 * * * *"
 
-  # Prevent overlapping jobs
   concurrencyPolicy: Forbid
-
-  # If missed, don't stack multiple runs
   startingDeadlineSeconds: 300
 
-  # Automatically clean up old jobs (VERY IMPORTANT)
   successfulJobsHistoryLimit: 1
   failedJobsHistoryLimit: 1
 
   jobTemplate:
     spec:
-      # Auto-delete pods after completion
       ttlSecondsAfterFinished: 300
 
       template:
@@ -26,12 +20,10 @@ spec:
           containers:
             - name: etl
               image: swr.ap-southeast-3.myhuaweicloud.com/baykar-case/etl:v2
-
               envFrom:
                 - configMapRef:
                     name: app-config
 
           imagePullSecrets:
             - name: swr-secret
-
           restartPolicy: OnFailure
