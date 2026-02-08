@@ -2,7 +2,6 @@ apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: etl-job
-  namespace: mern-app
 spec:
   schedule: "*/5 * * * *"
   jobTemplate:
