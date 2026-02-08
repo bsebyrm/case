@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: backend-alerts
+  namespace: monitoring
+spec:
+  groups:
+    - name: backend.rules
+      rules:
+
+        # 🚨 Alert 1: Backend Pod Down
+        - alert: BackendPodDown
+          expr: absent(up == 1)
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Backend pod is DOWN!"
+            description: "No backend pod is responding for more than 1 minute."
+
+        # 🚨 Alert 2: High CPU Usage
+        - alert: BackendHighCPU
+          expr: rate(container_cpu_usage_seconds_total{pod=~"backend.*"}[2m]) > 0.8
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Backend CPU usage is HIGH!"
+            description: "Backend pods are using more than 80% CPU for 2 minutes."

@@ -62,20 +62,30 @@ jobs:
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
       # ✅ Install Helm if missing
-      - name: Install Helm
+      - name: Install Helm (No sudo)
         run: |
           if ! command -v helm &> /dev/null
           then
-            echo "Helm not found, installing..."
-            curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            echo "Helm not found, installing locally..."
+
+            HELM_VERSION="v3.20.0"
+
+            curl -fsSL -o helm.tar.gz \
+              https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz
+
+            tar -xzf helm.tar.gz
+
+            mkdir -p $HOME/bin
+            mv linux-amd64/helm $HOME/bin/helm
+
+            echo "$HOME/bin" >> $GITHUB_PATH
+
+            echo "Helm installed successfully!"
           else
             echo "Helm already installed"
           fi
-
-      # --- Apply Kubernetes manifests ---
-      - name: Apply manifests
-        run: |
-          kubectl apply -f k8s/ -n mern-app
+       - name: Check Helm Version
+         run: helm version
 
       # ✅ Install Monitoring Stack (Prometheus + Grafana)
       - name: Install Monitoring Stack
@@ -87,6 +97,10 @@ jobs:
 
           helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
             -n monitoring
+
+      - name: Apply Alert Rules
+        run: |
+          kubectl apply -f k8s/monitoring/alert-rule.yaml
 
       # --- Update Backend & Frontend images ---
       - name: Update Backend & Frontend images
