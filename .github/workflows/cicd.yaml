@@ -90,9 +90,13 @@ jobs:
         run: helm version
 
       # --- Apply Kubernetes manifests (App Deploy) ---
-      - name: Apply manifests
+      - name: Apply manifests (safe)
         run: |
-          kubectl apply -f k8s/ -n mern-app
+          kubectl apply -f k8s/mongodb.yaml -n mern-app
+          kubectl apply -f k8s/backend.yaml -n mern-app
+          kubectl apply -f k8s/frontend.yaml -n mern-app
+          kubectl apply -f k8s/ingress-frontend.yaml -n mern-app
+          kubectl apply -f k8s/hpa-backend.yaml -n mern-app
 
       # ✅ Install Monitoring Stack (Prometheus + Grafana)
       - name: Install Monitoring Stack
