@@ -106,3 +106,5 @@ Final Status
 	• ETL job runs hourly as required
 	• Kubernetes best practices applied for stability and scalability
 
+
+
