@@ -68,6 +68,7 @@ jobs:
           kubectl apply -f k8s/backend.yaml -n mern-app
           kubectl apply -f k8s/frontend.yaml -n mern-app
           kubectl apply -f k8s/etl-cronjob.yaml -n mern-app
+          kubectl apply -f k8s/frontend-ingress.yaml -n mern-app
 
       # --- Update Backend & Frontend images ---
       - name: Update Backend & Frontend images
