@@ -61,58 +61,13 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      # ✅ Install Helm locally (No sudo required)
-      - name: Install Helm (No sudo)
-        run: |
-          if ! command -v helm &> /dev/null
-          then
-            echo "Helm not found, installing locally..."
-
-            HELM_VERSION="v3.20.0"
-
-            curl -fsSL -o helm.tar.gz \
-              https://get.helm.sh/helm-${HELM_VERSION}-linux-amd64.tar.gz
-
-            tar -xzf helm.tar.gz
-
-            mkdir -p $HOME/bin
-            mv linux-amd64/helm $HOME/bin/helm
-
-            echo "$HOME/bin" >> $GITHUB_PATH
-
-            echo "Helm installed successfully!"
-          else
-            echo "Helm already installed"
-          fi
-
-      # ✅ Verify Helm installation
-      - name: Check Helm Version
-        run: helm version
-
       # --- Apply Kubernetes manifests (App Deploy) ---
-      - name: Apply manifests (safe)
+      - name: Apply manifests
         run: |
           kubectl apply -f k8s/mongodb.yaml -n mern-app
           kubectl apply -f k8s/backend.yaml -n mern-app
           kubectl apply -f k8s/frontend.yaml -n mern-app
-          kubectl apply -f k8s/hpa-backend.yaml -n mern-app
-
-      # ✅ Install Monitoring Stack (Prometheus + Grafana)
-      - name: Install Monitoring Stack
-        run: |
-          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts || true
-          helm repo update
-
-          kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
-
-          helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
-            -n monitoring
-
-
-      # ✅ Apply Alert Rules
-      - name: Apply Alert Rules
-        run: |
-          kubectl apply -f k8s/monitoring/alert-rule.yaml
+          kubectl apply -f k8s/etl-cronjob.yaml -n mern-app
 
       # --- Update Backend & Frontend images ---
       - name: Update Backend & Frontend images
@@ -135,6 +90,4 @@ jobs:
       - name: Check Pods
         run: |
           kubectl get pods -n mern-app
-          kubectl get ingress -n mern-app
-          kubectl get hpa -n mern-app
-          kubectl get pods -n monitoring
+          kubectl get svc -n mern-app
