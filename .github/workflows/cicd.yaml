@@ -61,7 +61,7 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      # ✅ Install Helm if missing
+      # ✅ Install Helm locally (No sudo required)
       - name: Install Helm (No sudo)
         run: |
           if ! command -v helm &> /dev/null
@@ -84,8 +84,15 @@ jobs:
           else
             echo "Helm already installed"
           fi
-       - name: Check Helm Version
-         run: helm version
+
+      # ✅ Verify Helm installation
+      - name: Check Helm Version
+        run: helm version
+
+      # --- Apply Kubernetes manifests (App Deploy) ---
+      - name: Apply manifests
+        run: |
+          kubectl apply -f k8s/ -n mern-app
 
       # ✅ Install Monitoring Stack (Prometheus + Grafana)
       - name: Install Monitoring Stack
@@ -98,6 +105,7 @@ jobs:
           helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
             -n monitoring
 
+      # ✅ Apply Alert Rules
       - name: Apply Alert Rules
         run: |
           kubectl apply -f k8s/monitoring/alert-rule.yaml
@@ -123,3 +131,6 @@ jobs:
       - name: Check Pods
         run: |
           kubectl get pods -n mern-app
+          kubectl get ingress -n mern-app
+          kubectl get hpa -n mern-app
+          kubectl get pods -n monitoring
