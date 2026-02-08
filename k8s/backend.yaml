@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend
+  namespace: mern-app
 spec:
   replicas: 1
   selector:
@@ -24,6 +25,15 @@ spec:
           ports:
             - containerPort: 5000
 
+          # ✅ Resources (Required for HPA)
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
           env:
             - name: MONGO_URI
               value: "mongodb://mongodb:27017/sample_training"
@@ -37,6 +47,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: backend
+  namespace: mern-app
 spec:
   selector:
     app: backend
