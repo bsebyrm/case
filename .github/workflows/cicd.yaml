@@ -61,19 +61,34 @@ jobs:
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBECONFIG_DATA }}" | base64 -d > $HOME/.kube/config
 
-      # --- Login to SWR (optional but safe) ---
-      - name: Login to SWR on Runner
+      # ✅ Install Helm if missing
+      - name: Install Helm
         run: |
-          echo "${{ secrets.SWR_PASSWORD }}" | docker login ${{ secrets.SWR_REGISTRY }} \
-            -u "${{ secrets.SWR_USERNAME }}" \
-            --password-stdin
+          if ! command -v helm &> /dev/null
+          then
+            echo "Helm not found, installing..."
+            curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          else
+            echo "Helm already installed"
+          fi
 
       # --- Apply Kubernetes manifests ---
       - name: Apply manifests
         run: |
           kubectl apply -f k8s/ -n mern-app
 
-      # --- Rollout new Backend & Frontend images ---
+      # ✅ Install Monitoring Stack (Prometheus + Grafana)
+      - name: Install Monitoring Stack
+        run: |
+          helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+          helm repo update
+
+          kubectl create namespace monitoring || true
+
+          helm upgrade --install kube-prometheus prometheus-community/kube-prometheus-stack \
+            -n monitoring
+
+      # --- Update Backend & Frontend images ---
       - name: Update Backend & Frontend images
         run: |
           kubectl set image deployment/backend backend=${{ secrets.SWR_REGISTRY }}/baykar-case/backend:${{ github.sha }} -n mern-app
